@@ -1,0 +1,37 @@
+# Virtual environments
+.venv
+venv
+conda
+
+# Database files
+db/
+*.db
+*.sqlite3
+
+# Cache files
+__pycache__/
+
+
+# Output files
+out/
+
+# Build files
+dist/
+build/
+
+# Binary objects
+bin/
+*.exe
+*.bin
+
+# Large files
+res/books/
+
+# Logs
+*.log
+
+# Environment Variables
+.env*
+
+# Except the example ones
+!.env.example

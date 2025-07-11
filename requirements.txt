@@ -1,0 +1,45 @@
+# LangChain core
+langchain
+langchain-core
+langchain-community
+
+# OpenAI Integration
+langchain-openai
+openai
+
+# Anthropic Integration
+langchain-anthropic
+
+# Google Gemini (PaLM) Integration
+langchain-google-genai
+google-generativeai
+
+# Hugging Face Integration
+langchain-huggingface
+transformers
+huggingface-hub
+sentence-transformers
+
+# Environment Variable Management
+python-dotenv
+
+# Machine Learning Utilities
+numpy
+torch
+torchvision
+torchaudio
+scikit-learn
+grandalf
+faiss-cpu
+
+# For web based content
+beautifulsoup4
+selenium
+unstructured
+
+# For vector storage
+chromadb
+langchain-chroma
+
+# Youtube video transcript fetch
+youtube-transcript-api
