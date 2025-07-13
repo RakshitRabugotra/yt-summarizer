@@ -90,7 +90,7 @@ else:
 
 # The chain to translate to english if not already
 runnable_generate_translation = (
-    RunnablePassthrough(lambda _: print(f"[DEBUG]: Generating response for query"))
+    RunnablePassthrough(lambda _: print(f"[DEBUG]: Translating the input to English"))
     | llm
     | str_parser
     | RunnablePassthrough(lambda _: print(f"[DEBUG]: Translation completed"))
