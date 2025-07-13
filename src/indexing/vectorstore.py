@@ -28,13 +28,13 @@ if not os.path.isdir(PERSIST_DIRECTORY):
 
 # The API keys for our models
 OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
-HUGGINGFACE_TOKEN: str | None = os.getenv("HUGGINGFACEHUB_ACCESS_TOKEN")
+HUGGINGFACEHUB_API_TOKEN: str | None = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 # On initialization of the model, if we have hugging face token, then login
-if HUGGINGFACE_TOKEN:
+if HUGGINGFACEHUB_API_TOKEN:
     from huggingface_hub import login
 
-    login(HUGGINGFACE_TOKEN)
+    login(HUGGINGFACEHUB_API_TOKEN)
 
 
 # Get the embedding model
@@ -42,7 +42,7 @@ def get_embedding_function():
     # The precedence goes like
     # OpenAI, HuggingFace
     OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
-    HUGGINGFACE_TOKEN: str | None = os.getenv("HUGGINGFACEHUB_ACCESS_TOKEN")
+    HUGGINGFACEHUB_API_TOKEN: str | None = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
     # First preference
     if OPENAI_API_KEY:
@@ -51,17 +51,17 @@ def get_embedding_function():
         )
 
     # Second preference
-    if HUGGINGFACE_TOKEN:
+    if HUGGINGFACEHUB_API_TOKEN:
         return HuggingFaceEndpointEmbeddings(
             model=os.getenv(
                 "HUGGINGFACE_EMBEDDINGS_MODEL", "intfloat/e5-mistral-7b-instruct"
             ),
             task="feature-extraction",
-            huggingfacehub_api_token=HUGGINGFACE_TOKEN,
+            huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
         )
 
     raise EnvironmentError(
-        "Neither API Key set for OPENAI nor HUGGINGFACE\nSet `OPENAI_API_KEY` or `HUGGINGFACEHUB_ACCESS_TOKEN` in your environment"
+        "Neither API Key set for OPENAI nor HUGGINGFACE\nSet `OPENAI_API_KEY` or `HUGGINGFACEHUB_API_TOKEN` in your environment"
     )
 
 

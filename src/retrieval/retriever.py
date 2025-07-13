@@ -32,13 +32,32 @@ def __retrieve_docs(inputs: RetrievalInputs) -> RetrievalOutputs:
     print(f"[DEBUG]: Retrieving documents for video='{inputs['video_url']}'")
     # Get the video_id
     video_id = YouTubeTranscriptsLoader.get_video_id(inputs["video_url"])
-    # Get the retriever
-    retriever = get_vector_store().as_retriever(
+
+    # Configure the retriever
+    retriever_kwargs = dict(
         search_type="similarity",
         search_kwargs={"k": 4, "filter": {"video_id": video_id}},
     )
-    # Append matching chunks to the output
-    inputs["chunks"] = retriever.invoke(inputs["query"])
+    # Get the retriever
+    retriever = get_vector_store().as_retriever(**retriever_kwargs)
+
+    try:
+        # Append matching chunks to the output
+        inputs["chunks"] = retriever.invoke(inputs["query"])
+    except Exception as e:
+        # Check if the exception is result of an unexpected vector size
+        if not str(e).startswith(
+            "Collection expecting embedding with dimension of"
+        ) or "got" not in str(e):
+            raise e
+        # We're dealing with a shift in embedding vector type, clear the store and reset the db
+        get_vector_store().delete_collection()
+        # Initialize a new store, and a retriever
+        retriever = get_vector_store().as_retriever(**retriever_kwargs)
+        # Append matching chunks to the output
+        inputs["chunks"] = retriever.invoke(inputs["query"])
+    
+    # Return the inputs, converted to output
     return inputs
 
 

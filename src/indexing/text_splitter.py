@@ -6,14 +6,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.runnables import RunnableLambda
 
 # Custom modules
-from src.indexing.vectorstore import get_vector_store
+from src.indexing.vectorstore import get_vector_store, Chroma
 
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 0.20 * CHUNK_SIZE
-
-# Perform a check if we don't have OpenAI Key, then trow error
-if not os.getenv("OPENAI_API_KEY"):
-    raise EnvironmentError("`OPENAI_API_KEY` is not set, it is required!")
 
 """
 Formats the documents into strings

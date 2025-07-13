@@ -121,12 +121,12 @@ def get_summary_results(inputs: RetrieverChainInputs) -> tuple[bool, str]:
     # Get the retriever chain
     retriever_chain = get_retriever_chain()
     # Return the documents
-    try:
-        response = retriever_chain.invoke(inputs)
-        return True, response
-    except Exception as e:
-        print("[ERROR]: " + str(e))
-        return False, str(e)
+    # try:
+    response = retriever_chain.invoke(inputs)
+    return True, response
+    # except Exception as e:
+        # print("[ERROR]: " + str(e))
+        # return False, str(e)
 
 
 if __name__ == "__main__":
