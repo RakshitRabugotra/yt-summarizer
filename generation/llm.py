@@ -13,4 +13,4 @@ llm = init_chat_model(
 )
 
 # The main exportable here
-generate = (llm | str_parser)
+runnable_generate = (llm | str_parser)

@@ -1,26 +1,38 @@
 from typing import TypedDict
 from langchain_core.runnables import RunnableLambda
-from indexing.vectorstore import Chroma
+
+from indexing.vectorstore import get_vector_store
+from indexing.document_loader import YouTubeTranscriptsLoader
+
 
 class RetrievalInputs(TypedDict):
-    vectorstore: Chroma
     query: str
+    video_url: str
+
 
 class RetrievalOutputs(TypedDict):
+    chunks: str
     query: str
-    context: str
+    video_url: str
 
-def __get_retrieved_docs(inputs: RetrievalInputs):
+
+def __retrieve_docs(inputs: RetrievalInputs):
+
+    # Get the video_id
+    video_id = YouTubeTranscriptsLoader.get_video_id(inputs['video_url'])
+
     # Get the retriever
-    retriever = inputs['vectorstore'].as_retriever(
+    retriever = get_vector_store().as_retriever(
         search_type="similarity",
-        search_kwargs={"k": 4}
+        search_kwargs={"k": 4, "filter": {"video_id": video_id}},
     )
-    matching_docs = retriever.invoke(inputs['query'])
-    formatted_text = "\n\n".join(doc.page_content for doc in matching_docs)
-    # Return the retrieved context
-    inputs["context"] = formatted_text
+
+    # Append matching chunks to the output
+    inputs['chunks'] = retriever.invoke(inputs['query'])
+
     return inputs
 
+
+
 # The main export from this module
-get_retrieved_docs = RunnableLambda(__get_retrieved_docs)
+runnable_retrieve_docs = RunnableLambda(__retrieve_docs)

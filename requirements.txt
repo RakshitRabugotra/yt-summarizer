@@ -43,3 +43,9 @@ langchain-chroma
 
 # Youtube video transcript fetch
 youtube-transcript-api
+
+# For streamlit ui
+streamlit
+
+# For data manipulation
+pandas

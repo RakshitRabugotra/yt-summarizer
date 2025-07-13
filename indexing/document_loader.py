@@ -10,9 +10,6 @@ from langchain.schema import Document
 # Youtube api
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 
-# Custom imports
-from indexing.vectorstore import get_vector_store
-
 class InvalidYouTubeURLException(Exception):
     """Raised when the provided URL is not a valid YouTube URL."""
     pass
@@ -21,20 +18,17 @@ class InvalidYouTubeURLException(Exception):
 class YouTubeTranscriptsLoader(BaseLoader):
 
     class YouTubeTranscriptsLoaderInitArgs(TypedDict):
-        yt_video_urls: list[str] = (None,)
-        yt_video_ids: list[str] = (None,)
+        yt_video_urls: list[str] | None = None
         transcript_languages: list[str] = ["en"]
 
     def __init__(
         self,
-        yt_video_urls: list[str] = None,
-        yt_video_ids: list[str] = None,
+        yt_video_urls: list[str] | None = None,
         transcript_languages: list[str] = ["en"],
     ):
         """
         Args:
             yt_video_urls: The full length URLs to Youtube video in a list
-            yt_video_ids: The "video IDs" to YouTube video is a list
             transcript_languages: The list containing desired languages for transcripts `['en', 'hi']`
 
         Raises:
@@ -55,16 +49,10 @@ class YouTubeTranscriptsLoader(BaseLoader):
             >>>     print("[Error]: ", str(e))
         """
         _vid_ids = None
-        # First let's check if the ids are provided
-        if yt_video_ids and isinstance(yt_video_ids, list):
-            _vid_ids = [
-                self.__get_video_id(yt_video_id=vid_id) for vid_id in yt_video_ids
-            ]
-
-        # If not, then let's check if the urls are provided
+        # let's check if the urls are provided
         if yt_video_urls and isinstance(yt_video_urls, list):
             _vid_ids = [
-                self.__get_video_id(yt_video_url=vid_url) for vid_url in yt_video_urls
+                YouTubeTranscriptsLoader.get_video_id(vid_url) for vid_url in yt_video_urls
             ]
 
         # if _vid_ids is still none, raise an exception
@@ -73,7 +61,6 @@ class YouTubeTranscriptsLoader(BaseLoader):
 
         # These are all valid so store them in
         self.yt_video_urls = yt_video_urls
-        self.yt_video_ids = yt_video_ids
         # Get the desired transcripts
         self.transcript_languages = transcript_languages
         # Validate the video_urls and ids
@@ -97,8 +84,9 @@ class YouTubeTranscriptsLoader(BaseLoader):
                 metadata={"video_id": vid_id, "length": len(transcript)},
             )
 
+    @staticmethod
     def is_valid_youtube_url(
-        self, url: str, return_video_id: bool = True
+        url: str, return_video_id: bool = True
     ) -> Tuple[bool, Union[str, None]]:
         """
         Validates a YouTube video URL and optionally extracts the video ID.
@@ -121,21 +109,16 @@ class YouTubeTranscriptsLoader(BaseLoader):
             raise TypeError("URL must be a string.")
 
         # Regex for matching YouTube video URLs
-        youtube_regex = re.compile(
-            r"""^(https?://)?          # http or https protocol (optional)
-            (www\.)?                  # www. (optional)
-            (youtube\.com|youtu\.be)  # youtube domain
-            (/watch\?v=|/embed/|/v/|/shorts/|/)? # valid paths to video ID
-            ([\w-]{11})               # video ID is always 11 characters
-            (&.+)?$                   # optional query params
-            """,
-            re.VERBOSE,
+        pattern = (
+            r'(?:https?:\/\/)?'                         # optional scheme
+            r'(?:[0-9A-Z-]+\.)?'                        # optional subdomain
+            r'(?:youtube|youtu|youtube-nocookie)\.(?:com|be)\/'  # domain
+            r'(?:watch\?v=|watch\?.+&v=|embed\/|v\/|.+\?v=)?'     # path or query
+            r'([^&=\n%\?]{11})'                         # capture group for video ID
         )
 
-        match = youtube_regex.match(url)
+        match = re.search(pattern, url, re.IGNORECASE)
         if not match:
-            if return_video_id:
-                return False, None
             return False, None
 
         try:
@@ -163,37 +146,30 @@ class YouTubeTranscriptsLoader(BaseLoader):
         except Exception as e:
             raise InvalidYouTubeURLException(f"Error parsing URL: {e}")
 
-    def __get_video_id(self, yt_video_url: str = None, yt_video_id: str = None):
-        # The video id takes precedence
-        url = yt_video_id or yt_video_url or None
-
+    @staticmethod
+    def get_video_id(yt_video_url: str):
         # If both the id and url are none, raise error
-        if not (yt_video_id or yt_video_url):
+        if not yt_video_url:
             raise ValueError(
-                "Both `yt_video_url` and `yt_video_id` cannot be None"
-            ) from (
-                yt_video_url,
-                yt_video_id,
-            )
+                "Both `yt_video_url` cannot be None"
+            ) from yt_video_url
 
         video_id = None
-        # If url parameter not is None, means we have the video url
-        if yt_video_url is not None:
-            # Check if the url is a valid one
-            is_valid, video_id = self.is_valid_youtube_url(url, return_video_id=True)
-            # If the url is not valid, raise
-            if not is_valid:
-                raise ValueError(
-                    f"Youtube video regex failed... invalid url format: '{url}'"
-                )
-        else:
-            # Else, we have the video if
-            video_id = url
+        # Check if the url is a valid one
+        is_valid, video_id = YouTubeTranscriptsLoader.is_valid_youtube_url(yt_video_url, return_video_id=True)
+        # If the url is not valid, raise
+        if not is_valid:
+            raise ValueError(
+                f"Youtube video regex failed... invalid url: '{yt_video_url}'"
+            )
 
         if not video_id:
-            raise ValueError(f"Couldn't get video ID from: '{url}'") from url
+            raise ValueError(f"Couldn't get video ID from: '{yt_video_url}'") from yt_video_url
 
         return video_id
+    
+
+    # Private Methods
 
     def __get_video_transcripts(self, video_id: str):
         """ """
@@ -213,17 +189,23 @@ class YouTubeTranscriptsLoader(BaseLoader):
         return transcript_list
 
 
+class LoadDocumentsInputs(TypedDict):
+    video_url: str
+
+class LoadDocumentOutputs(TypedDict):
+    video_url: str
+    docs: Iterator[Document]
+
 # Utility function which directly returns the document_loader
-def __load_documents(inputs: dict[str]):
-    # Extract the query
-    config = inputs.copy()
-    del config['query']
+def __load_documents(inputs: LoadDocumentsInputs) -> LoadDocumentOutputs:
     # Load all the documents
-    inputs['documents'] = YouTubeTranscriptsLoader.from_config(config).lazy_load()
+    inputs['docs'] = YouTubeTranscriptsLoader(
+        yt_video_urls=[inputs['video_url']]
+    ).lazy_load()
     return inputs
 
 # Main exportable from this module
-load_documents = RunnableLambda(__load_documents)
+runnable_load_documents = RunnableLambda(__load_documents)
 
 if __name__ == "__main__":
 

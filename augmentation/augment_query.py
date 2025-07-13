@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 
 # Get the qa prompt
-augmented_prompt = ChatPromptTemplate(
+runnable_augment_prompt = ChatPromptTemplate(
     [
         (
             "system",
