@@ -49,3 +49,6 @@ streamlit
 
 # For data manipulation
 pandas
+
+# For linux only
+pysqlite3-binary
