@@ -1,7 +1,30 @@
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+
+# The prompt to translate text to english if it isn't
+runnable_convert_to_english_prompt = RunnablePassthrough(
+    lambda _: print(f"[DEBUG]: Detecting language, and converting if necessary")
+) | ChatPromptTemplate(
+    [
+        (
+            "system",
+            """
+You are a skilled linguist capable to detect the language from the given text. Your task is to deeply analyze the text input provided within <transcript>...</transcript> and TRANSLATE IT TO ENGLISH IF IT IS NOT IN ENGLISH. This content represent the full or partial transcription or description of a video.
+Your goal is to translate the provided transcript to english if it is not already in english.
+When generating your response, follow these strict principles:
+Be accurate and DO NOT CHANGE THE MEANING OF THE transcript.
+DO NOT CHANGE THE transcript IF IT IS ALREADY IN ENGLISH AND RETURN AS IT IS.
+Start your response only after fully analyzing the transcript content inside <transcript>...</transcript>
+     """,
+        ),
+        ("human", "<transcript>{transcript}</transcript>"),
+    ]
+)
 
 # Get the qa prompt
-runnable_augment_prompt = ChatPromptTemplate(
+runnable_qa_augment_prompt = RunnablePassthrough(
+    lambda _: print(f"[DEBUG]: Augmenting prompt from given query and context")
+) | ChatPromptTemplate(
     [
         (
             "system",
@@ -19,4 +42,3 @@ Start your response only after fully analyzing the video content inside <context
         ("human", "{query}"),
     ]
 )
-

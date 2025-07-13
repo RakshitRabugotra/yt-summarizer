@@ -10,6 +10,10 @@ from langchain.schema import Document
 # Youtube api
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 
+# Custom imports
+from augmentation.augment_query import runnable_convert_to_english_prompt
+from generation.llm import runnable_generate
+
 class InvalidYouTubeURLException(Exception):
     """Raised when the provided URL is not a valid YouTube URL."""
     pass
@@ -19,12 +23,12 @@ class YouTubeTranscriptsLoader(BaseLoader):
 
     class YouTubeTranscriptsLoaderInitArgs(TypedDict):
         yt_video_urls: list[str] | None = None
-        transcript_languages: list[str] = ["en"]
+        transcript_languages: list[str] = ["en", "hi"]
 
     def __init__(
         self,
         yt_video_urls: list[str] | None = None,
-        transcript_languages: list[str] = ["en"],
+        transcript_languages: list[str] = ["en", "hi"],
     ):
         """
         Args:
@@ -52,7 +56,8 @@ class YouTubeTranscriptsLoader(BaseLoader):
         # let's check if the urls are provided
         if yt_video_urls and isinstance(yt_video_urls, list):
             _vid_ids = [
-                YouTubeTranscriptsLoader.get_video_id(vid_url) for vid_url in yt_video_urls
+                YouTubeTranscriptsLoader.get_video_id(vid_url)
+                for vid_url in yt_video_urls
             ]
 
         # if _vid_ids is still none, raise an exception
@@ -65,6 +70,8 @@ class YouTubeTranscriptsLoader(BaseLoader):
         self.transcript_languages = transcript_languages
         # Validate the video_urls and ids
         self.video_ids = _vid_ids
+        # Create the chain, to translate if needed
+        self.convert_if_not_english = runnable_convert_to_english_prompt | runnable_generate
 
     # Another method to initialize the class
     @classmethod
@@ -78,6 +85,8 @@ class YouTubeTranscriptsLoader(BaseLoader):
             transcript_list = self.__get_video_transcripts(vid_id)
             # Flatten the transcripts to a plain text
             transcript = " ".join(chunk["text"] for chunk in transcript_list)
+            # Detect the language of the documents
+            transcript = self.convert_if_not_english.invoke({ 'transcript': transcript })
             # Now we need to create a document object from this
             yield Document(
                 page_content=transcript,
@@ -110,11 +119,11 @@ class YouTubeTranscriptsLoader(BaseLoader):
 
         # Regex for matching YouTube video URLs
         pattern = (
-            r'(?:https?:\/\/)?'                         # optional scheme
-            r'(?:[0-9A-Z-]+\.)?'                        # optional subdomain
-            r'(?:youtube|youtu|youtube-nocookie)\.(?:com|be)\/'  # domain
-            r'(?:watch\?v=|watch\?.+&v=|embed\/|v\/|.+\?v=)?'     # path or query
-            r'([^&=\n%\?]{11})'                         # capture group for video ID
+            r"(?:https?:\/\/)?"  # optional scheme
+            r"(?:[0-9A-Z-]+\.)?"  # optional subdomain
+            r"(?:youtube|youtu|youtube-nocookie)\.(?:com|be)\/"  # domain
+            r"(?:watch\?v=|watch\?.+&v=|embed\/|v\/|.+\?v=)?"  # path or query
+            r"([^&=\n%\?]{11})"  # capture group for video ID
         )
 
         match = re.search(pattern, url, re.IGNORECASE)
@@ -150,13 +159,13 @@ class YouTubeTranscriptsLoader(BaseLoader):
     def get_video_id(yt_video_url: str):
         # If both the id and url are none, raise error
         if not yt_video_url:
-            raise ValueError(
-                "Both `yt_video_url` cannot be None"
-            ) from yt_video_url
+            raise ValueError("Both `yt_video_url` cannot be None") from yt_video_url
 
         video_id = None
         # Check if the url is a valid one
-        is_valid, video_id = YouTubeTranscriptsLoader.is_valid_youtube_url(yt_video_url, return_video_id=True)
+        is_valid, video_id = YouTubeTranscriptsLoader.is_valid_youtube_url(
+            yt_video_url, return_video_id=True
+        )
         # If the url is not valid, raise
         if not is_valid:
             raise ValueError(
@@ -164,10 +173,11 @@ class YouTubeTranscriptsLoader(BaseLoader):
             )
 
         if not video_id:
-            raise ValueError(f"Couldn't get video ID from: '{yt_video_url}'") from yt_video_url
+            raise ValueError(
+                f"Couldn't get video ID from: '{yt_video_url}'"
+            ) from yt_video_url
 
         return video_id
-    
 
     # Private Methods
 
@@ -189,29 +199,44 @@ class YouTubeTranscriptsLoader(BaseLoader):
         return transcript_list
 
 
+"""
+The Runnable for loading documents
+"""
+
 class LoadDocumentsInputs(TypedDict):
     video_url: str
+
 
 class LoadDocumentOutputs(TypedDict):
     video_url: str
     docs: Iterator[Document]
 
+
 # Utility function which directly returns the document_loader
 def __load_documents(inputs: LoadDocumentsInputs) -> LoadDocumentOutputs:
+    """
+    Load documents as transcripts of the given YouTube Video(s)
+    Args:
+        inputs: { video_url: str }
+    Returns:
+        outputs: { video_url: str, docs: Iterator[Document] }
+    """
+    # Print for a debug statement
+    print(f"[DEBUG]: Loading transcripts from url='{inputs['video_url']}'")
     # Load all the documents
-    inputs['docs'] = YouTubeTranscriptsLoader(
-        yt_video_urls=[inputs['video_url']]
+    inputs["docs"] = YouTubeTranscriptsLoader(
+        yt_video_urls=[inputs["video_url"]]
     ).lazy_load()
+    
     return inputs
+
 
 # Main exportable from this module
 runnable_load_documents = RunnableLambda(__load_documents)
 
 if __name__ == "__main__":
 
-    urls = [
-        "https://www.youtube.com/watch?v=4g-fPNjizrw"
-    ]
+    urls = ["https://www.youtube.com/watch?v=4g-fPNjizrw"]
 
     # Create a loader runnable
     loader = YouTubeTranscriptsLoader(yt_video_urls=urls)
@@ -223,4 +248,3 @@ if __name__ == "__main__":
             print(chunk)
     except Exception as e:
         print("[Error]: ", str(e))
-
