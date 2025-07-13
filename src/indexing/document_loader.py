@@ -23,12 +23,14 @@ class YouTubeTranscriptsLoader(BaseLoader):
 
     class YouTubeTranscriptsLoaderInitArgs(TypedDict):
         yt_video_urls: list[str] | None = None
-        transcript_languages: list[str] = ["en", "hi"]
+        transcript_languages: list[str] = ["en", "hi", "pa"]
+        translate_to_english: bool = True
 
     def __init__(
         self,
         yt_video_urls: list[str] | None = None,
-        transcript_languages: list[str] = ["en", "hi"],
+        transcript_languages: list[str] = ["en", "hi", "pa"],
+        translate_to_english: bool = True
     ):
         """
         Args:
@@ -72,6 +74,8 @@ class YouTubeTranscriptsLoader(BaseLoader):
         self.video_ids = _vid_ids
         # Create the chain, to translate if needed
         self.convert_if_not_english = runnable_convert_to_english_prompt | runnable_generate
+        # Flag to check if we want to translate the transcript to english
+        self.translate_to_english = translate_to_english
 
     # Another method to initialize the class
     @classmethod
@@ -85,8 +89,9 @@ class YouTubeTranscriptsLoader(BaseLoader):
             transcript_list = self.__get_video_transcripts(vid_id)
             # Flatten the transcripts to a plain text
             transcript = " ".join(chunk["text"] for chunk in transcript_list)
-            # Detect the language of the documents
-            transcript = self.convert_if_not_english.invoke({ 'transcript': transcript })
+            # Detect the language of the documents, if we want to do so
+            if self.translate_to_english:
+                transcript = self.convert_if_not_english.invoke({ 'transcript': transcript })
             # Now we need to create a document object from this
             yield Document(
                 page_content=transcript,
