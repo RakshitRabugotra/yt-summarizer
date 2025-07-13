@@ -5,6 +5,7 @@ import streamlit as st
 
 # Custom Imports
 from src.rag import get_summary_results
+from src.indexing.document_loader import YouTubeTranscriptsLoader
 
 #
 # Utility function
@@ -13,6 +14,15 @@ def invoke_retrieval_chain():
     # Get the input from input box
     video_url = st.session_state.video_url
     query = st.session_state.query
+
+    # Check if the given video_url is a valid YT one
+    is_valid, _ = YouTubeTranscriptsLoader.is_valid_youtube_url(
+        video_url, return_video_id=False
+    )
+
+    # If it is not valid, then don't proceed and show an error message
+    if not is_valid:
+        return st.error("Invalid YouTube video URL. Cannot proceed, please check it")
 
     # Call the backend chain
     success, response = get_summary_results({
