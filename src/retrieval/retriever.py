@@ -5,8 +5,8 @@ from langchain_core.runnables import RunnableLambda
 from langchain.schema import Document
 
 # Custom imports
-from indexing.vectorstore import get_vector_store
-from indexing.document_loader import YouTubeTranscriptsLoader
+from src.indexing.vectorstore import get_vector_store
+from src.indexing.document_loader import YouTubeTranscriptsLoader
 
 
 class RetrievalInputs(TypedDict):

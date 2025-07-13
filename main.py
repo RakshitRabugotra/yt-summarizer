@@ -2,7 +2,9 @@
 The Streamlit client for our interaction
 """
 import streamlit as st
-from retrieval_chain import get_summary_results
+
+# Custom Imports
+from src.rag import get_summary_results
 
 #
 # Utility function

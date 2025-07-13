@@ -11,8 +11,8 @@ from langchain.schema import Document
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 
 # Custom imports
-from augmentation.augment_query import runnable_convert_to_english_prompt
-from generation.llm import runnable_generate
+from src.augmentation.augment_query import runnable_convert_to_english_prompt
+from src.generation.llm import runnable_generate
 
 class InvalidYouTubeURLException(Exception):
     """Raised when the provided URL is not a valid YouTube URL."""

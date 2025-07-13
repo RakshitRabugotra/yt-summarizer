@@ -31,14 +31,14 @@ load_dotenv()
 from langchain_core.runnables import RunnablePassthrough, RunnableBranch, Runnable
 
 # Then load all the modules
-from indexing.document_loader import runnable_load_documents
-from indexing.text_splitter import (
+from src.indexing.document_loader import runnable_load_documents
+from src.indexing.text_splitter import (
     runnable_format_documents,
     runnable_split_embed_and_store,
 )
-from retrieval.retriever import runnable_retrieve_docs
-from augmentation.augment_query import runnable_qa_augment_prompt
-from generation.llm import runnable_generate
+from src.retrieval.retriever import runnable_retrieve_docs
+from src.augmentation.augment_query import runnable_qa_augment_prompt
+from src.generation.llm import runnable_generate
 
 
 class RetrieverChainInputs(TypedDict):

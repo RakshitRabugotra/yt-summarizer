@@ -6,7 +6,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.runnables import RunnableLambda
 
 # Custom modules
-from indexing.vectorstore import get_vector_store
+from src.indexing.vectorstore import get_vector_store
 
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 0.20 * CHUNK_SIZE
