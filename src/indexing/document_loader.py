@@ -22,9 +22,9 @@ class InvalidYouTubeURLException(Exception):
 class YouTubeTranscriptsLoader(BaseLoader):
 
     class YouTubeTranscriptsLoaderInitArgs(TypedDict):
-        yt_video_urls: list[str] | None = None
-        transcript_languages: list[str] = ["en", "hi", "pa"]
-        translate_to_english: bool = True
+        yt_video_urls: list[str] | None
+        transcript_languages: list[str]
+        translate_to_english: bool
 
     def __init__(
         self,
@@ -86,11 +86,11 @@ class YouTubeTranscriptsLoader(BaseLoader):
     def lazy_load(self) -> Iterator[Document]:
         # Iterate over all the video ids, and return the transcripts
         for vid_id in self.video_ids:
-            transcript_list = self.__get_video_transcripts(vid_id)
+            lang, transcript_list = self.__get_video_transcripts(vid_id)
             # Flatten the transcripts to a plain text
             transcript = " ".join(chunk["text"] for chunk in transcript_list)
             # Detect the language of the documents, if we want to do so
-            if self.translate_to_english:
+            if lang != "en" and self.translate_to_english:
                 transcript = self.convert_if_not_english.invoke({ 'transcript': transcript })
             # Now we need to create a document object from this
             yield Document(
@@ -187,21 +187,29 @@ class YouTubeTranscriptsLoader(BaseLoader):
     # Private Methods
 
     def __get_video_transcripts(self, video_id: str):
-        """ """
-        try:
-            transcript_list = YouTubeTranscriptApi.get_transcript(
-                video_id, languages=self.transcript_languages
-            )
-        except TranscriptsDisabled as tde:
-            raise Exception("No captions available for this video.") from tde
-        except Exception as e:
-            raise Exception(
-                "Unexpected exception happened during fetching transcripts\n[ERROR]: "
-                + str(e)
-            ) from e
+        """
+        Tries to get the transcripts of the video, if not available, it will try to get the transcripts of the video in next available language
+        Args:
+            video_id: The id of the video to get the transcripts of
+        Returns:
+            transcript_list: The list of transcripts of the video
+        Raises:
+            TranscriptsDisabled: If the transcripts are disabled for the video
+            Exception: If the transcripts are not available for the video
+        """
+        transcript_list = None
 
-        # Return the transcript list
-        return transcript_list
+        for lang in self.transcript_languages:
+            try:
+                transcript_list = YouTubeTranscriptApi.get_transcript(
+                    video_id, languages=[lang]
+                )
+                return (lang, transcript_list)
+            except TranscriptsDisabled as tde:
+                print(f"[DEBUG]: Transcripts are disabled for this video in {lang} language")
+
+        if transcript_list is None:
+            raise Exception("No captions available for this video.")
 
 
 """
